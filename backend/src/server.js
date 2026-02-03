@@ -1,8 +1,11 @@
+const path = require('path');
+require('dotenv').config({
+  path: path.join(__dirname, '..', '.env'),
+});
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const dotenv = require('dotenv');
 
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
@@ -11,7 +14,8 @@ const taskRoutes = require('./routes/taskRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
-dotenv.config({ path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env' });
+
+//dotenv.config({ path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env' });
 
 const app = express();
 

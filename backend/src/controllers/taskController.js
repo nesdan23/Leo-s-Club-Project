@@ -29,11 +29,9 @@ exports.createTask = async (req, res, next) => {
 
 exports.getTasks = async (req, res, next) => {
   try {
-    let query = {};
-
-    if (req.user.role === 'Team Member') {
-      query = { $or: [{ assignee: req.user._id }, { assignee: null }] };
-    }
+    const query = {
+      assignee: req.user._id,
+    };
 
     const tasks = await Task.find(query)
       .populate('event', 'title date status')
