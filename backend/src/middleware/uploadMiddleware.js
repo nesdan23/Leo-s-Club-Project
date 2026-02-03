@@ -7,7 +7,6 @@ const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
   const allowedMimeTypes = [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-    'application/vnd.ms-excel', // .xls (for compatibility)
   ];
 
   if (allowedMimeTypes.includes(file.mimetype)) {
@@ -15,7 +14,7 @@ const fileFilter = (req, file, cb) => {
   } else {
     cb(
       new Error(
-        'Invalid file type. Only Excel files (.xlsx, .xls) are allowed.'
+        'Invalid file type. Only Excel files (.xlsx) are allowed.'
       ),
       false
     );

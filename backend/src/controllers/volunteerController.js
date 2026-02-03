@@ -1,4 +1,4 @@
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const User = require('../models/User');
 const Event = require('../models/Event');
 const EventVolunteer = require('../models/EventVolunteer');
