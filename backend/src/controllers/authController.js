@@ -15,7 +15,7 @@ const sanitizeUser = (user) => ({
 
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, phone, password, role } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email and password are required' });
@@ -29,6 +29,7 @@ exports.register = async (req, res, next) => {
     const user = await User.create({
       name,
       email,
+      phone,
       password,
       role,
     });
