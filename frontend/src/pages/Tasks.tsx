@@ -1,279 +1,443 @@
-import { useEffect, useState } from 'react';
-import api from '../services/api';
-import { Task } from '../types';
-import { useAuth } from '../contexts/AuthContext';
-import {
-  CheckSquare,
-  Clock,
-  Calendar,
-  Tag,
-  ChevronDown,
-  Search,
-} from 'lucide-react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { CheckSquare, Calendar, Trash2, Edit3, Plus } from 'lucide-react';
+import { tasksApi, adminApi, eventsApi } from '@/services/api';
+import { useAuthStore } from '@/store/authStore';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Modal } from '@/components/ui/Modal';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { TASK_STATUSES, TASK_DOMAINS } from '@/constants';
+import type { Task, Event } from '@/types';
 
-const STATUS_OPTIONS = ['Pending', 'In Progress', 'Completed'];
-const DOMAIN_OPTIONS = ['Logistics', 'Marketing', 'General', 'Fundraising', 'Outreach', 'Operations', 'Other'];
+function formatDate(d: string) {
+  return new Date(d).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
 
-export default function Tasks() {
-  const { user } = useAuth();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [domainFilter, setDomainFilter] = useState('');
-  const [expandedTask, setExpandedTask] = useState<string | null>(null);
-  const [updating, setUpdating] = useState<string | null>(null);
+export function Tasks() {
+  const [filter, setFilter] = useState<string>('');
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const canDelete = useAuthStore(
+    (s) => s.user?.role === 'Event Manager' || s.user?.role === 'Admin'
+  );
+  const canCreate = canDelete;
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  const fetchTasks = async () => {
-    try {
-      const response = await api.get<Task[]>('/tasks');
-      setTasks(response.data);
-    } catch (error) {
-      console.error('Failed to fetch tasks:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateTask = async (taskId: string, updates: Partial<Task>) => {
-    setUpdating(taskId);
-    try {
-      await api.patch(`/tasks/${taskId}`, updates);
-      fetchTasks();
-    } catch (error) {
-      console.error('Failed to update task:', error);
-    } finally {
-      setUpdating(null);
-    }
-  };
-
-  const filteredTasks = tasks.filter((task) => {
-    const matchesSearch =
-      task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter ? task.status === statusFilter : true;
-    const matchesDomain = domainFilter ? task.domain === domainFilter : true;
-    return matchesSearch && matchesStatus && matchesDomain;
+  const { data: tasks = [], isLoading } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => tasksApi.list().then((r) => r.data),
   });
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      Pending: 'bg-gray-100 text-gray-700',
-      'In Progress': 'bg-amber-100 text-amber-700',
-      Completed: 'bg-green-100 text-green-700',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-700';
-  };
+  const filtered = (tasks as Task[]).filter((t) => !filter || t.status === filter);
 
-  const getDomainColor = (domain: string) => {
-    const colors: Record<string, string> = {
-      Logistics: 'bg-blue-100 text-blue-700',
-      Marketing: 'bg-pink-100 text-pink-700',
-      General: 'bg-gray-100 text-gray-700',
-      Fundraising: 'bg-green-100 text-green-700',
-      Outreach: 'bg-purple-100 text-purple-700',
-      Operations: 'bg-orange-100 text-orange-700',
-      Other: 'bg-slate-100 text-slate-700',
-    };
-    return colors[domain] || 'bg-gray-100 text-gray-700';
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const userRole = useAuthStore((s) => s.user?.role);
+  const isEventManagerOrAdmin = userRole === 'Event Manager' || userRole === 'Admin';
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Tasks</h1>
-        <p className="mt-1 text-gray-500">
-          {user?.role === 'Team Member'
-            ? 'View and update tasks assigned to you'
-            : 'Manage tasks across all events'}
-        </p>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search tasks..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-        >
-          <option value="">All Status</option>
-          {STATUS_OPTIONS.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
-        <select
-          value={domainFilter}
-          onChange={(e) => setDomainFilter(e.target.value)}
-          className="px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-        >
-          <option value="">All Domains</option>
-          {DOMAIN_OPTIONS.map((domain) => (
-            <option key={domain} value={domain}>
-              {domain}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Tasks List */}
-      {filteredTasks.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl card-shadow">
-          <CheckSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900">No tasks found</h3>
-          <p className="text-gray-500 mt-1">
-            {searchTerm || statusFilter || domainFilter
-              ? 'Try adjusting your filters'
-              : 'No tasks have been assigned to you yet'}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="section-header">
+            {isEventManagerOrAdmin ? 'All tasks' : 'My tasks'}
+          </h1>
+          <p className="text-slate-600">
+            {isEventManagerOrAdmin
+              ? 'Tasks for events you manage'
+              : 'Tasks assigned to you'}
           </p>
         </div>
+        {canCreate && (
+          <Button onClick={() => setCreateOpen(true)} size="md">
+            <Plus className="h-4 w-4 mr-2" />
+            Assign task
+          </Button>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setFilter('')}
+          className={`rounded-xl px-3 py-1.5 text-sm font-medium ${
+            filter === '' ? 'bg-primary-100 text-primary-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          All
+        </button>
+        {TASK_STATUSES.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setFilter(s)}
+            className={`rounded-xl px-3 py-1.5 text-sm font-medium ${
+              filter === s ? 'bg-primary-100 text-primary-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse h-24" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <Card className="py-12 text-center">
+          <CheckSquare className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-600">No tasks assigned</p>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {filteredTasks.map((task) => (
-            <div
-              key={task._id}
-              className="bg-white rounded-2xl card-shadow overflow-hidden"
-            >
-              <div
-                className="p-6 cursor-pointer"
-                onClick={() => setExpandedTask(expandedTask === task._id ? null : task._id)}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(task.status)}`}>
-                        {task.status}
-                      </span>
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${getDomainColor(task.domain)}`}>
-                        {task.domain}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900">{task.name}</h3>
-                    <p className="text-gray-500 text-sm mt-1 line-clamp-2">{task.description}</p>
-
-                    <div className="flex items-center gap-4 mt-3 text-sm text-gray-600">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        <span>{task.event?.title}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                        <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-gray-900">{task.completionPercentage}%</p>
-                      <p className="text-xs text-gray-500">Complete</p>
-                    </div>
-                    <ChevronDown
-                      className={`w-5 h-5 text-gray-400 transition-transform ${
-                        expandedTask === task._id ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </div>
+          {filtered.map((task) => (
+            <Card key={task._id} className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-semibold text-slate-900">{task.name}</h3>
+                  <StatusBadge status={task.status} />
+                  <span className="text-xs text-slate-500">{task.domain}</span>
                 </div>
-
-                {/* Progress bar */}
-                <div className="mt-4">
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        task.completionPercentage === 100
-                          ? 'bg-green-500'
-                          : task.completionPercentage > 50
-                          ? 'bg-blue-500'
-                          : 'bg-amber-500'
-                      }`}
-                      style={{ width: `${task.completionPercentage}%` }}
-                    />
-                  </div>
+                <p className="text-sm text-slate-600 mt-0.5 line-clamp-1">{task.description}</p>
+                <div className="flex items-center gap-3 mt-2 text-sm text-slate-500">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    Due {formatDate(task.dueDate)}
+                  </span>
+                  <span>{task.completionPercentage}%</span>
+                </div>
+                <div className="mt-2 w-full max-w-xs h-2 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary-500 rounded-full transition-all"
+                    style={{ width: `${task.completionPercentage}%` }}
+                  />
                 </div>
               </div>
-
-              {/* Expanded section */}
-              {expandedTask === task._id && (
-                <div className="px-6 pb-6 pt-2 border-t border-gray-100">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Update Status
-                      </label>
-                      <select
-                        value={task.status}
-                        onChange={(e) => updateTask(task._id, { status: e.target.value as Task['status'] })}
-                        disabled={updating === task._id}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white disabled:opacity-50"
-                      >
-                        {STATUS_OPTIONS.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Completion: {task.completionPercentage}%
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        step="5"
-                        value={task.completionPercentage}
-                        onChange={(e) =>
-                          updateTask(task._id, { completionPercentage: parseInt(e.target.value) })
-                        }
-                        disabled={updating === task._id}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600 disabled:opacity-50"
-                      />
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>0%</span>
-                        <span>100%</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {updating === task._id && (
-                    <div className="flex items-center gap-2 mt-4 text-sm text-blue-600">
-                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                      <span>Updating...</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditTask(task)}
+                  aria-label="Edit task"
+                >
+                  <Edit3 className="h-4 w-4" />
+                </Button>
+                {canDelete && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDeleteId(task._id)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    aria-label="Delete task"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </Card>
           ))}
         </div>
       )}
+
+      {editTask && (
+        <EditTaskModal
+          task={editTask}
+          open={!!editTask}
+          onClose={() => setEditTask(null)}
+        />
+      )}
+      {deleteId && (
+        <DeleteTaskModal
+          taskId={deleteId}
+          open={!!deleteId}
+          onClose={() => setDeleteId(null)}
+        />
+      )}
+      {createOpen && (
+        <CreateTaskModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+        />
+      )}
     </div>
+  );
+}
+
+function EditTaskModal({
+  task,
+  open,
+  onClose,
+}: {
+  task: Task;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [status, setStatus] = useState(task.status);
+  const [completionPercentage, setCompletionPercentage] = useState(task.completionPercentage);
+  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      tasksApi.update(task._id, { status, completionPercentage }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      onClose();
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      setError(err.response?.data?.message ?? 'Update failed');
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (completionPercentage < 0 || completionPercentage > 100) {
+      setError('Completion must be between 0 and 100');
+      return;
+    }
+    updateMutation.mutate();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Update task">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <p className="text-sm text-slate-600">{task.name}</p>
+        <Select
+          label="Status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as Task['status'])}
+        >
+          {TASK_STATUSES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </Select>
+        <Input
+          label="Completion %"
+          type="number"
+          min={0}
+          max={100}
+          value={completionPercentage}
+          onChange={(e) => setCompletionPercentage(Number(e.target.value))}
+        />
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <div className="flex gap-2 justify-end">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={updateMutation.isPending}>
+            {updateMutation.isPending ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function DeleteTaskModal({
+  taskId,
+  open,
+  onClose,
+}: {
+  taskId: string;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const deleteMutation = useMutation({
+    mutationFn: () => tasksApi.delete(taskId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      onClose();
+    },
+  });
+
+  return (
+    <Modal open={open} onClose={onClose} title="Delete task">
+      <p className="text-slate-600 mb-4">Are you sure you want to delete this task?</p>
+      <div className="flex gap-2 justify-end">
+        <Button variant="secondary" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button
+          variant="danger"
+          onClick={() => deleteMutation.mutate()}
+          disabled={deleteMutation.isPending}
+        >
+          {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+function CreateTaskModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [eventId, setEventId] = useState('');
+  const [assignee, setAssignee] = useState('');
+  const [status, setStatus] = useState('Pending');
+  const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [dueDate, setDueDate] = useState('');
+  const [domain, setDomain] = useState('General');
+  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+
+  const { data: events = [] } = useQuery({
+    queryKey: ['events'],
+    queryFn: () => eventsApi.list().then((r) => r.data),
+  });
+
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => adminApi.getUsers().then((r) => r.data),
+    enabled: open,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      tasksApi.create({
+        name,
+        description,
+        event: eventId,
+        assignee: assignee || null,
+        status,
+        completionPercentage,
+        dueDate,
+        domain,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      onClose();
+      setName('');
+      setDescription('');
+      setEventId('');
+      setAssignee('');
+      setStatus('Pending');
+      setCompletionPercentage(0);
+      setDueDate('');
+      setDomain('General');
+      setError('');
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      setError(err.response?.data?.message ?? 'Failed to create task');
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!name || !description || !eventId || !dueDate || !domain) {
+      setError('Please fill all required fields');
+      return;
+    }
+    createMutation.mutate();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Assign task">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="Task name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Task name"
+          required
+        />
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Task description"
+            rows={3}
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-900 placeholder-slate-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+            required
+          />
+        </div>
+        <Select
+          label="Event"
+          value={eventId}
+          onChange={(e) => setEventId(e.target.value)}
+          required
+        >
+          <option value="">Select an event</option>
+          {(events as Event[]).map((e) => (
+            <option key={e._id} value={e._id}>
+              {e.title}
+            </option>
+          ))}
+        </Select>
+        <Select
+          label="Assign to (optional)"
+          value={assignee}
+          onChange={(e) => setAssignee(e.target.value)}
+        >
+          <option value="">Unassigned</option>
+          {users.map((u) => (
+            <option key={u._id} value={u._id}>
+              {u.name} ({u.email})
+            </option>
+          ))}
+        </Select>
+        <Select
+          label="Domain"
+          value={domain}
+          onChange={(e) => setDomain(e.target.value)}
+          required
+        >
+          {TASK_DOMAINS.map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </Select>
+        <Select
+          label="Status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
+          {TASK_STATUSES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </Select>
+        <Input
+          label="Due date"
+          type="datetime-local"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+          required
+        />
+        <Input
+          label="Completion %"
+          type="number"
+          min={0}
+          max={100}
+          value={completionPercentage}
+          onChange={(e) => setCompletionPercentage(Number(e.target.value))}
+        />
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <div className="flex gap-2 justify-end pt-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={createMutation.isPending}>
+            {createMutation.isPending ? 'Creating...' : 'Create task'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

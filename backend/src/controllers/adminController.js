@@ -1,5 +1,6 @@
 const Event = require('../models/Event');
 const Task = require('../models/Task');
+const User = require('../models/User');
 
 exports.getDashboardStats = async (_req, res, next) => {
   try {
@@ -32,6 +33,15 @@ exports.getDashboardStats = async (_req, res, next) => {
     });
 
     res.json({ events: payload });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getUsers = async (_req, res, next) => {
+  try {
+    const users = await User.find().select('name email role').lean();
+    res.json(users);
   } catch (error) {
     next(error);
   }

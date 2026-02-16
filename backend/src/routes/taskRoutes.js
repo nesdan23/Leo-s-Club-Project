@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.use(protect);
 
-router.route('/').get(getTasks).post(restrictTo('Event Manager'), createTask);
+router.route('/').get(getTasks).post(restrictTo('Admin', 'Event Manager'), createTask);
 
 router
   .route('/:id')

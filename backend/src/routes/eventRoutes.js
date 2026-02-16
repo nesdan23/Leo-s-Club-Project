@@ -10,12 +10,12 @@ const router = express.Router();
 
 router.use(protect);
 
-router.route('/').get(getEvents).post(restrictTo('Event Manager'), createEvent);
+router.route('/').get(getEvents).post(restrictTo('Admin', 'Event Manager'), createEvent);
 
 // Volunteer import route (must be before /:id to avoid route conflicts)
 router.post(
   '/:id/volunteers/import',
-  restrictTo('Event Manager'),
+  restrictTo('Admin', 'Event Manager'),
   (req, res, next) => {
     uploadExcel(req, res, (err) => {
       if (err) {

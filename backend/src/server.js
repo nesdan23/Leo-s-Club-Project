@@ -39,10 +39,15 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
-  await connectDB();
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error('MongoDB connection failed:', err.message);
+    console.error('API will respond but database operations will fail until MongoDB is running.');
+  }
 };
 
 startServer();

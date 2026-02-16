@@ -29,12 +29,23 @@ exports.createTask = async (req, res, next) => {
 
 exports.getTasks = async (req, res, next) => {
   try {
-    const query = {
-      assignee: req.user._id,
-    };
+    let query = {};
+
+    if (req.user.role === 'Admin') {
+      // Admin sees all tasks
+      query = {};
+    } else if (req.user.role === 'Event Manager') {
+      // Event Manager sees all tasks for events they manage
+      const eventsManaged = await Event.find({ manager: req.user._id }).select('_id').lean();
+      const eventIds = eventsManaged.map((e) => e._id);
+      query = { event: { $in: eventIds } };
+    } else {
+      // Team Member sees only tasks assigned to them
+      query = { assignee: req.user._id };
+    }
 
     const tasks = await Task.find(query)
-      .populate('event', 'title date status')
+      .populate('event', 'title date status manager')
       .populate('assignee', 'name email');
 
     res.json(tasks);

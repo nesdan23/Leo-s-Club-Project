@@ -1,26 +1,31 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-@theme {
-  --color-primary: #1e40af;
-  --color-primary-dark: #1e3a8a;
-  --color-secondary: #f59e0b;
-  --color-accent: #10b981;
-  --font-sans: 'Inter', system-ui, sans-serif;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 248 250 252;
+    --foreground: 15 23 42;
+    --card: 255 255 255;
+    --muted: 241 245 249;
+    --primary: 14 165 233;
+    --radius: 1rem;
+  }
+
+  body {
+    @apply bg-surface text-slate-800 antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-semibold tracking-tight text-slate-900;
+  }
 }
 
-body {
-  font-family: var(--font-sans);
-  background-color: #f8fafc;
-}
-
-.gradient-bg {
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-}
-
-.card-shadow {
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-}
-
-.card-shadow-lg {
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+@layer components {
+  .section-header {
+    @apply text-xl md:text-2xl font-semibold text-slate-900 mb-4;
+  }
 }

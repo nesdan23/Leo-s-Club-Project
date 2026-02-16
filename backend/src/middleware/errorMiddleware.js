@@ -5,9 +5,16 @@ const notFound = (req, res, next) => {
 };
 
 const errorHandler = (err, req, res, _next) => {
-  const statusCode = err.statusCode || 500;
+  const isDbError =
+    err.name === 'MongoServerSelectionError' ||
+    err.name === 'MongoNetworkError' ||
+    (err.message && err.message.includes('ECONNREFUSED'));
+  const statusCode = err.statusCode || (isDbError ? 503 : 500);
+  const message = isDbError
+    ? 'Database unavailable. Please ensure MongoDB is running and MONGO_URI is set in .env'
+    : (err.message || 'Internal Server Error');
   res.status(statusCode).json({
-    message: err.message || 'Internal Server Error',
+    message,
     stack: process.env.NODE_ENV === 'production' ? undefined : err.stack,
   });
 };

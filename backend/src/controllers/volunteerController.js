@@ -26,8 +26,10 @@ exports.importVolunteers = async (req, res, next) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // Check if the logged-in user is the event manager
-    if (event.manager.toString() !== req.user._id.toString()) {
+    // Check if the logged-in user is the event manager or Admin
+    const isManager = event.manager.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'Admin';
+    if (!isManager && !isAdmin) {
       return res.status(403).json({
         message: 'You can only import volunteers to events you manage',
       });
@@ -35,21 +37,32 @@ exports.importVolunteers = async (req, res, next) => {
 
     // Parse Excel file
     let workbook;
+    let data;
     try {
-      workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+      workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(req.file.buffer);
+      const worksheet = workbook.worksheets[0];
+      
+      // Convert to JSON array
+      data = [];
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return; // Skip header row
+        const rowData = {};
+        row.eachCell((cell, colNumber) => {
+          const headerCell = worksheet.getRow(1).getCell(colNumber);
+          const header = headerCell.value?.toString() || '';
+          rowData[header] = cell.value?.toString() || '';
+        });
+        if (Object.keys(rowData).length > 0) {
+          data.push(rowData);
+        }
+      });
     } catch (error) {
       return res.status(400).json({
         message: 'Invalid Excel file format',
         error: error.message,
       });
     }
-
-    // Get first sheet
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-
-    // Convert to JSON
-    const data = XLSX.utils.sheet_to_json(worksheet);
 
     if (data.length === 0) {
       return res.status(400).json({ message: 'Excel file is empty' });
