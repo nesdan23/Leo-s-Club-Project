@@ -49,10 +49,21 @@ exports.importVolunteers = async (req, res, next) => {
         if (rowNumber === 1) return; // Skip header row
         const rowData = {};
         row.eachCell((cell, colNumber) => {
-          const headerCell = worksheet.getRow(1).getCell(colNumber);
-          const header = headerCell.value?.toString() || '';
-          rowData[header] = cell.value?.toString() || '';
-        });
+  const headerCell = worksheet.getRow(1).getCell(colNumber);
+  const header = headerCell.value?.toString().trim() || '';
+
+  let value = '';
+
+  if (cell.value) {
+    if (typeof cell.value === 'object') {
+      value = cell.value.text || cell.value.hyperlink || '';
+    } else {
+      value = cell.value.toString();
+    }
+  }
+
+  rowData[header] = value.trim();
+});
         if (Object.keys(rowData).length > 0) {
           data.push(rowData);
         }
@@ -146,6 +157,7 @@ exports.importVolunteers = async (req, res, next) => {
         let user = await User.findOne({ email });
 
         if (!user) {
+          console.log("NEW USER CREATED:", email);
           // Create new user account
           const password = generatePassword(12);
           user = await User.create({
@@ -179,6 +191,7 @@ exports.importVolunteers = async (req, res, next) => {
           });
         } else {
           // User already exists
+          console.log("USER ALREADY EXISTS:", email);
           results.linked.push({
             row: rowNumber,
             email,

@@ -1,3 +1,4 @@
+
 const nodemailer = require('nodemailer');
 
 // Validate email configuration
@@ -34,6 +35,7 @@ const transporter = nodemailer.createTransport({
  * @returns {Promise} Email send result
  */
 const sendVolunteerCredentials = async (email, name, password, eventTitle) => {
+  console.log("📧 sendVolunteerCredentials called for:", email);
   // Check if email configuration is set
   if (!validateEmailConfig()) {
     return {

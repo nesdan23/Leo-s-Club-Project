@@ -2,6 +2,8 @@ const path = require('path');
 require('dotenv').config({
   path: path.join(__dirname, '..', '.env'),
 });
+console.log("Loaded EMAIL_USER:", process.env.EMAIL_USER);
+console.log("Loaded EMAIL_PASS:", process.env.EMAIL_PASS ? "Yes" : "No");
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
