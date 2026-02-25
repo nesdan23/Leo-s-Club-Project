@@ -120,8 +120,22 @@ export function Dashboard() {
 
   const adminEvents = isAdmin ? adminData?.events : undefined;
 
-  const recentEvents = events.slice(0, 5);
-  const recentTasks = tasks.slice(0, 5);
+  const recentEvents = [...events]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt || b.date).getTime() -
+        new Date(a.createdAt || a.date).getTime()
+    )
+    .slice(0, 5);
+
+  const activeTasks = tasks.filter((task) => task.status !== 'Completed');
+  const recentTasks = [...activeTasks]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt || b.dueDate).getTime() -
+        new Date(a.createdAt || a.dueDate).getTime()
+    )
+    .slice(0, 5);
 
 
 
