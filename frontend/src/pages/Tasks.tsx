@@ -20,6 +20,12 @@ function formatDate(d: string) {
   });
 }
 
+
+function getStatusFromCompletion(completionPercentage: number): Task['status'] {
+  if (completionPercentage <= 0) return 'Pending';
+  if (completionPercentage >= 100) return 'Completed';
+  return 'In Progress';
+}
 export function Tasks() {
   const [filter, setFilter] = useState<string>('');
   const [editTask, setEditTask] = useState<Task | null>(null);
@@ -180,14 +186,14 @@ function EditTaskModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const [status, setStatus] = useState(task.status);
   const [completionPercentage, setCompletionPercentage] = useState(task.completionPercentage);
+  const derivedStatus = getStatusFromCompletion(completionPercentage);
   const [error, setError] = useState('');
   const queryClient = useQueryClient();
 
   const updateMutation = useMutation({
     mutationFn: () =>
-      tasksApi.update(task._id, { status, completionPercentage }),
+      tasksApi.update(task._id, { status: derivedStatus, completionPercentage }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       onClose();
@@ -211,23 +217,27 @@ function EditTaskModal({
     <Modal open={open} onClose={onClose} title="Update task">
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm text-slate-600">{task.name}</p>
-        <Select
-          label="Status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as Task['status'])}
-        >
-          {TASK_STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </Select>
-        <Input
-          label="Completion %"
-          type="number"
-          min={0}
-          max={100}
-          value={completionPercentage}
-          onChange={(e) => setCompletionPercentage(Number(e.target.value))}
-        />
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">Status</label>
+          <p className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-slate-900">
+            {derivedStatus}
+          </p>
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">Completion %</label>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={completionPercentage}
+              onChange={(e) => setCompletionPercentage(Number(e.target.value))}
+              className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-primary-600"
+            />
+            <span className="w-12 text-right text-sm font-medium text-slate-700">{completionPercentage}%</span>
+          </div>
+        </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex gap-2 justify-end">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -291,7 +301,6 @@ function CreateTaskModal({
   const [eventId, setEventId] = useState('');
   const [assignee, setAssignee] = useState('');
   const [status, setStatus] = useState('Pending');
-  const [completionPercentage, setCompletionPercentage] = useState(0);
   const [dueDate, setDueDate] = useState('');
   const [domain, setDomain] = useState('General');
   const [error, setError] = useState('');
@@ -316,7 +325,6 @@ function CreateTaskModal({
         event: eventId,
         assignee: assignee || null,
         status,
-        completionPercentage,
         dueDate,
         domain,
       }),
@@ -328,7 +336,6 @@ function CreateTaskModal({
       setEventId('');
       setAssignee('');
       setStatus('Pending');
-      setCompletionPercentage(0);
       setDueDate('');
       setDomain('General');
       setError('');
@@ -419,14 +426,6 @@ function CreateTaskModal({
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
           required
-        />
-        <Input
-          label="Completion %"
-          type="number"
-          min={0}
-          max={100}
-          value={completionPercentage}
-          onChange={(e) => setCompletionPercentage(Number(e.target.value))}
         />
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex gap-2 justify-end pt-2">

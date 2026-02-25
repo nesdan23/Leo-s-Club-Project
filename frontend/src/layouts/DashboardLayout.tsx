@@ -28,7 +28,7 @@ export function DashboardLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate(ROUTES.LOGIN);
+    navigate(ROUTES.LOGIN, { replace: true });
   };
 
   return (
