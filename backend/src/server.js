@@ -21,7 +21,10 @@ const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 
 //dotenv.config({ path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env' });
-
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true
+}));
 const app = express();
 
 app.use(helmet());
