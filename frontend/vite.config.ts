@@ -13,7 +13,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'https://leo-s-club-project-ij25.onrender.com',
         changeOrigin: true,
       },
     },
