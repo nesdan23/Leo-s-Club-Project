@@ -12,6 +12,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 
+const app = express();
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const eventRoutes = require('./routes/eventRoutes');
@@ -21,14 +22,12 @@ const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 
 //dotenv.config({ path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env' });
+
 app.use(cors({
   origin: process.env.FRONTEND_URL,
   credentials: true
 }));
-const app = express();
-
 app.use(helmet());
-app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
