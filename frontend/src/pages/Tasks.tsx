@@ -300,7 +300,6 @@ function CreateTaskModal({
   const [description, setDescription] = useState('');
   const [eventId, setEventId] = useState('');
   const [assignee, setAssignee] = useState('');
-  const [status, setStatus] = useState('Pending');
   const [dueDate, setDueDate] = useState('');
   const [domain, setDomain] = useState('General');
   const [error, setError] = useState('');
@@ -324,7 +323,7 @@ function CreateTaskModal({
         description,
         event: eventId,
         assignee: assignee || null,
-        status,
+        status: 'Pending',
         dueDate,
         domain,
       }),
@@ -335,7 +334,6 @@ function CreateTaskModal({
       setDescription('');
       setEventId('');
       setAssignee('');
-      setStatus('Pending');
       setDueDate('');
       setDomain('General');
       setError('');
@@ -409,15 +407,6 @@ function CreateTaskModal({
         >
           {TASK_DOMAINS.map((d) => (
             <option key={d} value={d}>{d}</option>
-          ))}
-        </Select>
-        <Select
-          label="Status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-        >
-          {TASK_STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
           ))}
         </Select>
         <Input
